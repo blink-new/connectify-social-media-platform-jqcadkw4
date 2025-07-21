@@ -29,30 +29,60 @@ function App() {
   useEffect(() => {
     const unsubscribe = blink.auth.onAuthStateChanged(async (state) => {
       if (state.user && !state.isLoading) {
-        // Check if user profile exists in our database
-        const existingUsers = await blink.db.users.list({
-          where: { id: state.user.id },
-          limit: 1
-        })
+        try {
+          // Check if user profile exists in our database
+          const existingUsers = await blink.db.users.list({
+            where: { id: state.user.id },
+            limit: 1
+          })
 
-        if (existingUsers.length === 0) {
-          // Create user profile
-          const newUser = {
-            id: state.user.id,
-            email: state.user.email,
-            username: state.user.email.split('@')[0],
-            displayName: state.user.email.split('@')[0],
-            bio: '',
-            avatarUrl: '',
-            followersCount: 0,
-            followingCount: 0,
-            postsCount: 0
+          if (existingUsers.length === 0) {
+            // Create user profile
+            const newUserData = {
+              id: state.user.id,
+              email: state.user.email,
+              username: state.user.email.split('@')[0],
+              display_name: state.user.email.split('@')[0],
+              bio: '',
+              avatar_url: '',
+              followers_count: 0,
+              following_count: 0,
+              posts_count: 0
+            }
+            
+            await blink.db.users.create(newUserData)
+            
+            // Convert to camelCase for frontend
+            const newUser = {
+              id: newUserData.id,
+              email: newUserData.email,
+              username: newUserData.username,
+              displayName: newUserData.display_name,
+              bio: newUserData.bio,
+              avatarUrl: newUserData.avatar_url,
+              followersCount: newUserData.followers_count,
+              followingCount: newUserData.following_count,
+              postsCount: newUserData.posts_count
+            }
+            setUser(newUser)
+          } else {
+            // Convert existing user data from snake_case to camelCase
+            const existingUser = existingUsers[0] as any
+            const user = {
+              id: existingUser.id,
+              email: existingUser.email,
+              username: existingUser.username,
+              displayName: existingUser.display_name,
+              bio: existingUser.bio,
+              avatarUrl: existingUser.avatar_url,
+              followersCount: existingUser.followers_count,
+              followingCount: existingUser.following_count,
+              postsCount: existingUser.posts_count
+            }
+            setUser(user)
           }
-          
-          await blink.db.users.create(newUser)
-          setUser(newUser)
-        } else {
-          setUser(existingUsers[0] as User)
+        } catch (error) {
+          console.error('Error loading user profile:', error)
         }
       } else {
         setUser(null)

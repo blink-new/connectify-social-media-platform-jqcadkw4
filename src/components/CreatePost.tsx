@@ -72,19 +72,24 @@ export function CreatePost({ user, onClose, onPostCreated }: CreatePostProps) {
         imageUrl = publicUrl
       }
 
-      // Create post
-      await blink.db.posts.create({
+      // Create post - using snake_case field names to match database schema
+      const postData = {
         id: `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId: user.id,
+        user_id: user.id,
         content: content.trim(),
-        imageUrl: imageUrl || undefined,
-        likesCount: 0,
-        commentsCount: 0
-      })
+        image_url: imageUrl || null,
+        likes_count: 0,
+        comments_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('Creating post with data:', postData)
+      await blink.db.posts.create(postData)
 
       // Update user's post count
       await blink.db.users.update(user.id, {
-        postsCount: user.postsCount + 1
+        posts_count: user.postsCount + 1
       })
 
       toast({
@@ -95,9 +100,17 @@ export function CreatePost({ user, onClose, onPostCreated }: CreatePostProps) {
       onPostCreated()
     } catch (error) {
       console.error('Error creating post:', error)
+      
+      // More detailed error logging
+      if (error instanceof Error) {
+        console.error('Error name:', error.name)
+        console.error('Error message:', error.message)
+        console.error('Error stack:', error.stack)
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create post. Please try again.",
+        description: `Failed to create post: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       })
     } finally {

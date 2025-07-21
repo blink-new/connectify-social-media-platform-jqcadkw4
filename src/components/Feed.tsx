@@ -41,15 +41,15 @@ export function Feed({ user }: FeedProps) {
       
       // Get all posts with user information
       const allPosts = await blink.db.posts.list({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
         limit: 50
       })
 
       // Get user information for each post
       const postsWithUsers = await Promise.all(
-        allPosts.map(async (post) => {
+        allPosts.map(async (post: any) => {
           const postUsers = await blink.db.users.list({
-            where: { id: post.userId },
+            where: { id: post.user_id },
             limit: 1
           })
           
@@ -57,15 +57,22 @@ export function Feed({ user }: FeedProps) {
           const likes = await blink.db.likes.list({
             where: { 
               AND: [
-                { userId: user.id },
-                { postId: post.id }
+                { user_id: user.id },
+                { post_id: post.id }
               ]
             },
             limit: 1
           })
 
+          // Convert database fields to camelCase for frontend
           return {
-            ...post,
+            id: post.id,
+            userId: post.user_id,
+            content: post.content,
+            imageUrl: post.image_url,
+            likesCount: post.likes_count,
+            commentsCount: post.comments_count,
+            createdAt: post.created_at,
             user: postUsers[0] as User,
             isLiked: likes.length > 0
           }
@@ -94,8 +101,8 @@ export function Feed({ user }: FeedProps) {
         const likes = await blink.db.likes.list({
           where: { 
             AND: [
-              { userId: user.id },
-              { postId: postId }
+              { user_id: user.id },
+              { post_id: postId }
             ]
           },
           limit: 1
@@ -104,18 +111,18 @@ export function Feed({ user }: FeedProps) {
         if (likes.length > 0) {
           await blink.db.likes.delete(likes[0].id)
           await blink.db.posts.update(postId, {
-            likesCount: Math.max(0, post.likesCount - 1)
+            likes_count: Math.max(0, post.likesCount - 1)
           })
         }
       } else {
         // Like
         await blink.db.likes.create({
           id: `like_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          userId: user.id,
-          postId: postId
+          user_id: user.id,
+          post_id: postId
         })
         await blink.db.posts.update(postId, {
-          likesCount: post.likesCount + 1
+          likes_count: post.likesCount + 1
         })
       }
 
